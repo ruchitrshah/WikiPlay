@@ -1,0 +1,336 @@
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { App } from "./App";
+
+function dragSelectArticleText(element: HTMLElement) {
+  const range = document.createRange();
+  range.selectNodeContents(element);
+  const selection = window.getSelection();
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+  fireEvent.mouseUp(element.closest(".wiki-article") ?? element);
+}
+
+function startWikiPlay() {
+  fireEvent.click(screen.getByRole("button", { name: /start wikiplay/i }));
+  fireEvent.click(screen.getByRole("button", { name: /start playing/i }));
+}
+
+describe("Wikipedia Odyssey", () => {
+  it("introduces WikiPlay's value before showing the first task", () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: /start wikiplay/i }));
+
+    expect(screen.getByRole("heading", { name: /make wikipedia better/i })).toBeInTheDocument();
+    expect(screen.getByText(/grow your confidence/i)).toBeInTheDocument();
+    expect(screen.getByText(/5,800 readers every day/i)).toBeInTheDocument();
+    expect(screen.queryByText(/what natural disaster struck/i)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /start playing/i }));
+    expect(screen.getByText(/what natural disaster struck/i)).toBeInTheDocument();
+  });
+
+  it("opens from the discovery nudge and enables submit after a choice", () => {
+    render(<App />);
+    startWikiPlay();
+    const submit = screen.getByRole("button", { name: "Submit" });
+    expect(submit).toBeDisabled();
+    fireEvent.click(screen.getByLabelText("Earthquake and fire"));
+    expect(submit).toBeEnabled();
+  });
+
+  it("opens WikiPlay by revealing the right rail", () => {
+    render(<App />);
+    const panel = document.querySelector<HTMLElement>(".odyssey-panel");
+    expect(screen.getByRole("button", { name: "WikiPlay", exact: true })).toBeInTheDocument();
+    expect(panel).toHaveAttribute("aria-hidden", "true");
+    startWikiPlay();
+
+    expect(document.querySelector(".app-shell")).toHaveClass("is-started");
+    expect(screen.getByRole("complementary", { name: "WikiPlay" })).toBe(panel);
+    expect(panel).toHaveAttribute("aria-hidden", "false");
+    expect(panel).toHaveClass("is-active");
+  });
+
+  it("clears a selected single-choice answer when it is activated again", () => {
+    render(<App />);
+    startWikiPlay();
+    const answer = screen.getByLabelText("Earthquake and fire");
+    const submit = screen.getByRole("button", { name: "Submit" });
+
+    fireEvent.click(answer);
+    expect(answer).toBeChecked();
+    expect(submit).toBeEnabled();
+    fireEvent.click(answer);
+    expect(answer).not.toBeChecked();
+    expect(submit).toBeDisabled();
+  });
+
+  it("keeps multiple-choice answers independently toggleable", () => {
+    render(<App />);
+    startWikiPlay();
+    fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+    fireEvent.click(screen.getByRole("button", { name: /continue playing/i }));
+    const muni = screen.getByLabelText("Muni");
+    const bart = screen.getByLabelText("BART");
+
+    fireEvent.click(muni);
+    fireEvent.click(bart);
+    expect(muni).toBeChecked();
+    expect(bart).toBeChecked();
+    fireEvent.click(muni);
+    expect(muni).not.toBeChecked();
+    expect(bart).toBeChecked();
+  });
+
+  it("shows learning feedback and reduces chances after a wrong answer", () => {
+    render(<App />);
+    startWikiPlay();
+    fireEvent.click(screen.getByLabelText("Hurricane"));
+    fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+    expect(screen.getByText(/almost there\. keep going/i)).toBeInTheDocument();
+    expect(screen.getByText(/4 chances left\. the article section can help/i)).toBeInTheDocument();
+  });
+
+  it("shows earned points in feedback and cumulative points in the footer", () => {
+    render(<App />);
+    startWikiPlay();
+    fireEvent.click(screen.getByLabelText("Earthquake and fire"));
+    fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+    expect(within(document.querySelector(".points-earned") as HTMLElement).getByText("1 total point")).toBeInTheDocument();
+    expect(document.querySelector(".points-earned")).toHaveTextContent("1");
+    expect(document.querySelector(".points-earned")).not.toHaveTextContent("+");
+    expect(within(document.querySelector(".score-pill") as HTMLElement).getByText("1 total point")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Next Question" }));
+    fireEvent.click(screen.getByLabelText("Caltrain"));
+    fireEvent.click(screen.getByLabelText("Muni"));
+    fireEvent.click(screen.getByLabelText("BART"));
+    fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+    expect(within(document.querySelector(".points-earned") as HTMLElement).getByText("3 total points")).toBeInTheDocument();
+    expect(within(document.querySelector(".score-pill") as HTMLElement).getByText("3 total points")).toBeInTheDocument();
+  });
+
+  it("can skip and move to the multiple-choice step", () => {
+    render(<App />);
+    startWikiPlay();
+    fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+    expect(screen.getByRole("dialog", { name: /would you like to learn more/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /continue playing/i }));
+    expect(screen.getByText(/choose every answer supported/i)).toBeInTheDocument();
+    expect(screen.getByLabelText("Step 1: skipped")).toBeInTheDocument();
+  });
+
+  it("can learn from a skipped question before continuing", () => {
+    render(<App />);
+    startWikiPlay();
+    fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+    fireEvent.click(screen.getByRole("button", { name: "Learn More" }));
+    expect(screen.getByRole("dialog", { name: /look closer at history/i })).toBeInTheDocument();
+    expect(screen.getByLabelText("Step 1: skipped")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Next Question" }));
+    expect(screen.getByText(/choose every answer supported/i)).toBeInTheDocument();
+  });
+
+  it("only highlights an article passage after Learn More is chosen", () => {
+    render(<App />);
+    startWikiPlay();
+    const passage = document.getElementById("history-earthquake");
+    expect(passage).not.toHaveClass("is-highlighted");
+
+    fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+    expect(passage).not.toHaveClass("is-highlighted");
+    fireEvent.click(screen.getByRole("button", { name: "Learn More" }));
+    expect(passage).toHaveClass("is-highlighted");
+  });
+
+  it("prefills any dragged article text before accepting a sourced replacement", () => {
+    render(<App />);
+    startWikiPlay();
+    for (let step = 0; step < 4; step += 1) {
+      fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+      fireEvent.click(screen.getByRole("button", { name: /continue playing/i }));
+    }
+
+    const replacement = screen.getByLabelText("Your replacement");
+    const citation = screen.getByLabelText("Reliable source URL");
+    const submit = screen.getByRole("button", { name: "Submit" });
+    expect(replacement).toBeDisabled();
+    expect(citation).toBeDisabled();
+    expect(submit).toBeDisabled();
+
+    const selectedLine = screen.getByText("More recent estimates indicate that the city's population has since changed.");
+    expect(selectedLine).not.toHaveClass("is-highlighted");
+    dragSelectArticleText(selectedLine);
+    expect(document.querySelector(".selected-source blockquote")).toHaveTextContent("More recent estimates indicate that the city's population has since changed.");
+    expect(replacement).toBeEnabled();
+    expect(citation).toBeEnabled();
+
+    fireEvent.change(replacement, { target: { value: "A newer official estimate lists the population as 808,988 residents." } });
+    fireEvent.change(citation, { target: { value: "https://www.census.gov/quickfacts/" } });
+    expect(submit).toBeEnabled();
+    fireEvent.click(submit);
+    expect(screen.getByRole("heading", { name: /contributor/i })).toBeInTheDocument();
+  });
+
+  it("resets an unfinished replacement when a different article selection is dragged", () => {
+    render(<App />);
+    startWikiPlay();
+    for (let step = 0; step < 4; step += 1) {
+      fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+      fireEvent.click(screen.getByRole("button", { name: /continue playing/i }));
+    }
+
+    const firstLine = screen.getByText("More recent estimates indicate that the city's population has since changed.");
+    dragSelectArticleText(firstLine);
+    fireEvent.change(screen.getByLabelText("Your replacement"), { target: { value: "A detailed replacement that is long enough to submit." } });
+    fireEvent.change(screen.getByLabelText("Reliable source URL"), { target: { value: "https://example.com/source" } });
+
+    const secondLine = document.getElementById("race-statement");
+    expect(secondLine).not.toBeNull();
+    dragSelectArticleText(secondLine as HTMLElement);
+    expect(screen.getByLabelText("Your replacement")).toHaveValue("");
+    expect(screen.getByLabelText("Reliable source URL")).toHaveValue("");
+    expect(document.querySelector(".selected-source blockquote")).toHaveTextContent("As of the 2020 census");
+  });
+
+  it("keeps semantic inputs behind the round selection controls", () => {
+    render(<App />);
+    startWikiPlay();
+    expect(screen.getAllByRole("radio")).toHaveLength(4);
+
+    fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+    fireEvent.click(screen.getByRole("button", { name: /continue playing/i }));
+    expect(screen.getAllByRole("checkbox")).toHaveLength(4);
+  });
+
+  it("fills a short-answer input from dragged article text", () => {
+    render(<App />);
+    startWikiPlay();
+    for (let step = 0; step < 2; step += 1) {
+      fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+      fireEvent.click(screen.getByRole("button", { name: /continue playing/i }));
+    }
+
+    dragSelectArticleText(screen.getByText("Mount Davidson"));
+    expect(screen.getByLabelText("Your answer")).toHaveValue("Mount Davidson");
+    expect(screen.getByRole("button", { name: "Submit" })).toBeEnabled();
+  });
+
+  it("fills a visible fact-check correction from dragged article text", () => {
+    render(<App />);
+    startWikiPlay();
+    for (let step = 0; step < 3; step += 1) {
+      fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+      fireEvent.click(screen.getByRole("button", { name: /continue playing/i }));
+    }
+
+    fireEvent.click(screen.getByLabelText("No"));
+    const currentEstimate = document.querySelector(".population-table div:last-child span:last-child");
+    expect(currentEstimate).not.toBeNull();
+    dragSelectArticleText(currentEstimate as HTMLElement);
+    expect(screen.getByLabelText("What is the current information?")).toHaveValue("808,988");
+    expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Reliable source URL"), { target: { value: "https://www.census.gov/quickfacts/" } });
+    expect(screen.getByRole("button", { name: "Submit" })).toBeEnabled();
+  });
+
+  it("clears a selected fact-check verdict without erasing its draft", () => {
+    render(<App />);
+    startWikiPlay();
+    for (let step = 0; step < 3; step += 1) {
+      fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+      fireEvent.click(screen.getByRole("button", { name: /continue playing/i }));
+    }
+
+    const no = screen.getByLabelText("No");
+    fireEvent.click(no);
+    fireEvent.change(screen.getByLabelText("What is the current information?"), { target: { value: "808,988" } });
+    fireEvent.click(no);
+    expect(no).not.toBeChecked();
+    expect(screen.queryByLabelText("What is the current information?")).not.toBeInTheDocument();
+    fireEvent.click(no);
+    expect(screen.getByLabelText("What is the current information?")).toHaveValue("808,988");
+  });
+
+  it("presents concise completion copy and accessible final statistics", () => {
+    render(<App />);
+    startWikiPlay();
+    const panel = screen.getByRole("complementary", { name: "WikiPlay" });
+    const panelQueries = within(panel);
+    for (let step = 0; step < 8; step += 1) {
+      fireEvent.click(panelQueries.getByRole("button", { name: "Skip" }));
+      fireEvent.click(panelQueries.getByRole("button", { name: /continue playing/i }));
+    }
+
+    expect(screen.getByRole("heading", { name: "You Made Knowledge Better." })).toBeInTheDocument();
+    expect(screen.getByText("This page is viewed by ~5,800 readers daily.")).toBeInTheDocument();
+    expect(screen.getByText("Small improvements create lasting impact when they help thousands of readers access more accurate information every day.")).toBeInTheDocument();
+    expect(screen.queryByText(/that means more accurate information/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText("8 skipped questions")).toHaveClass("animated-count");
+    expect(document.querySelectorAll(".summary-grid .animated-count > span[aria-hidden='true']")).toHaveLength(4);
+  });
+
+  it("opens the Radix topic picker and closes it on Escape", () => {
+    render(<App />);
+    startWikiPlay();
+    fireEvent.click(screen.getByLabelText("Hurricane"));
+    fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+
+    const trigger = screen.getByRole("button", { name: /new topic/i });
+    fireEvent.click(trigger);
+    const picker = screen.getByRole("dialog", { name: /choose a new topic/i });
+    expect(picker).toBeVisible();
+
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(picker).toHaveAttribute("data-state", "closed");
+  });
+
+  it("selects a topic from the Radix popover and closes it", () => {
+    render(<App />);
+    startWikiPlay();
+    fireEvent.click(screen.getByLabelText("Hurricane"));
+    fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+    fireEvent.click(screen.getByRole("button", { name: /new topic/i }));
+
+    const picker = screen.getByRole("dialog", { name: /choose a new topic/i });
+    fireEvent.click(within(picker).getByRole("button", { name: "Economy" }));
+    const selectedTopic = document.querySelector(".topic-chip.selected");
+    expect(selectedTopic).toHaveTextContent("Economy");
+    expect(selectedTopic).toHaveAttribute("aria-pressed", "true");
+    expect(picker).toHaveAttribute("data-state", "closed");
+  });
+
+  it("shows topic recommendations only after an answer is submitted", () => {
+    render(<App />);
+    startWikiPlay();
+    expect(screen.queryByText(/choose your path by exploring/i)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("Hurricane"));
+    fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+    expect(screen.getByText(/choose your path/i)).toBeInTheDocument();
+  });
+
+  it("dismisses the invitation and returns focus to the Wikipedia header launcher", async () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: /dismiss wikiplay invitation/i }));
+    expect(screen.queryByText(/turn what you know/i)).not.toBeInTheDocument();
+    const launcher = screen.getByRole("button", { name: "WikiPlay", exact: true });
+    await waitFor(() => expect(launcher).toHaveFocus());
+    fireEvent.click(launcher);
+    expect(screen.getByRole("complementary", { name: "WikiPlay" })).toBeInTheDocument();
+  });
+
+  it("closes and resumes WikiPlay without resetting progress", async () => {
+    render(<App />);
+    startWikiPlay();
+    fireEvent.click(screen.getByLabelText("Earthquake and fire"));
+    fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+    fireEvent.click(screen.getByRole("button", { name: /close wikiplay/i }));
+    const launcher = screen.getByRole("button", { name: "WikiPlay", exact: true });
+    await waitFor(() => expect(launcher).toHaveFocus());
+    fireEvent.click(launcher);
+    expect(screen.getByText(/score 1\. 5 chances remaining/i)).toBeInTheDocument();
+  });
+});
