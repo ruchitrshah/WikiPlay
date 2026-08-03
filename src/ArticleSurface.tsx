@@ -1,4 +1,4 @@
-import { BookOpenText, CaretDown, List, MagnifyingGlass, Sparkle, Translate, UserCircle } from "@phosphor-icons/react";
+import { BookOpenText, CaretDown, List, MagnifyingGlass, Translate, UserCircle } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import wikipediaWordmark from "../Wikipedia-logo-textonly.svg.webp";
 
@@ -68,7 +68,7 @@ export function ArticleSurface({ activePassage, selectionEnabled, onSelectArticl
             inert={!showWikiPlayLauncher}
             tabIndex={showWikiPlayLauncher ? 0 : -1}
           >
-            <Sparkle size={19} weight="fill" aria-hidden="true" />
+            <img className="wiki-play-launcher-icon" src="/wikiplay-white.png" alt="" aria-hidden="true" />
             <span>WikiPlay</span>
           </button>
           <Translate size={20} aria-hidden="true" />

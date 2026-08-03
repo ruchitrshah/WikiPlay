@@ -386,7 +386,7 @@ export function OdysseyPanel(props: OdysseyPanelProps) {
   return (
     <aside className={`odyssey-panel${isActive ? " is-active" : ""}${showIntro ? " is-intro" : ""}`} aria-label="WikiPlay" aria-hidden={!isActive} inert={!isActive}>
       <div className="panel-top">
-        {showIntro ? <span className="intro-top-title"><Sparkle size={24} weight="duotone" aria-hidden="true" />WikiPlay</span> : <ProgressRail statuses={state.statuses} />}
+        {showIntro ? <span className="intro-top-title"><img src="/wikiplay-blue.png" alt="" aria-hidden="true" />WikiPlay</span> : <ProgressRail statuses={state.statuses} />}
         <button className="panel-close" type="button" aria-label="Close WikiPlay" onClick={onExit}><X size={16} weight="regular" aria-hidden="true" /></button>
       </div>
       <div className="panel-scroll">
@@ -416,7 +416,7 @@ export function OdysseyPanel(props: OdysseyPanelProps) {
       </div>
       {!showIntro && (
         <footer className="panel-footer">
-          <div className="odyssey-name"><span>WikiPlay</span></div>
+          <div className="odyssey-name"><img src="/wikiplay-blue.png" alt="" aria-hidden="true" /><span>WikiPlay</span></div>
           <Badge tone="neutral" className="score-pill"><Lightning size={18} weight="fill" /><ScoreTicker value={state.score} label={`${state.score} total ${state.score === 1 ? "point" : "points"}`} /></Badge>
         </footer>
       )}
