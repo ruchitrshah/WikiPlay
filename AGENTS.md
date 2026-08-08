@@ -13,3 +13,8 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 Durable UI notes:
 - Use `wikiplay-blue.png` for favicon and in-panel blue-brand marks, `wikiplay-white.png` for the launcher button icon on blue surfaces, and `WikiPlay.png` for website thumbnail/social metadata.
 - Keep the intro screen's top padding aligned with the rest of the rail screens, and anchor the `Start Playing` CTA to the bottom of the intro layout.
+- Keep all task inputs, textareas, URL fields, and placeholders at `16px`; drag-selected article text and manual typing must remain equivalent input methods where selection is enabled.
+- Keep article highlighting exclusive to explicit Learn More states. Routine task changes may scroll to a section but must not highlight it.
+- Fact-check `Yes` and format-valid sourced `No` are both successful contribution branches. Only sourced verification promotes the user to Fact-Checker, while correct answers add points once and wrong or skipped rounds never change the score.
+- Rounds 6-8 must stay bound to one selected topic and follow Learn, Verify, then Contribute.
+- Below `768px`, show the accessible video explainer instead of the article-and-rail workflow. From `768px` upward, preserve the split article and rail experience without horizontal overflow.

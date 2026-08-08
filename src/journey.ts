@@ -1,4 +1,4 @@
-import type { JourneyState, OdysseyTask, TaskResponse } from "./types";
+import type { AnswerFormat, JourneyState, OdysseyTask, TaskResponse } from "./types";
 
 export const emptyResponse = (): TaskResponse => ({
   selectedIds: [],
@@ -34,15 +34,23 @@ export function isValidCitation(value: string) {
   }
 }
 
+export function isValidAnswerFormat(value: string, format: AnswerFormat = "mixed") {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  if (format === "number") return /^[+-]?(?:\$)?\d[\d,]*(?:\.\d+)?(?:%|\s*(?:million|billion|trillion))?$/i.test(trimmed);
+  if (format === "text") return /^[\p{L}\s.'’\-–—]+$/u.test(trimmed);
+  return true;
+}
+
 export function canSubmit(task: OdysseyTask, response: TaskResponse) {
   if (task.type === "single-choice" || task.type === "multiple-choice") {
     return response.selectedIds.length > 0;
   }
-  if (task.type === "short-answer") return response.text.trim().length > 0;
+  if (task.type === "short-answer") return isValidAnswerFormat(response.text, task.answerFormat);
   if (task.type === "fact-check") {
     if (!response.verdict) return false;
     if (response.verdict === "yes") return true;
-    return response.correction.trim().length >= 3 && isValidCitation(response.citation);
+    return isValidAnswerFormat(response.correction, task.answerFormat) && isValidCitation(response.citation);
   }
   return response.selectedPassageId.length > 0
     && response.selectedText.trim().length > 0
@@ -61,13 +69,7 @@ export function evaluateTask(task: OdysseyTask, response: TaskResponse) {
     return (task.acceptedAnswers ?? []).some((answer) => normalize(answer) === actual);
   }
   if (task.type === "fact-check") {
-    if (response.verdict !== task.correctOptionIds?.[0]) return false;
-    if (response.verdict === "yes") return true;
-    const correction = normalize(response.correction);
-    const correctionMatches = task.acceptedAnswers?.length
-      ? task.acceptedAnswers.some((answer) => normalize(answer) === correction)
-      : response.correction.trim().length >= 3;
-    return correctionMatches && isValidCitation(response.citation);
+    return canSubmit(task, response);
   }
   return response.selectedPassageId.length > 0
     && response.selectedText.trim().length > 0
@@ -75,21 +77,21 @@ export function evaluateTask(task: OdysseyTask, response: TaskResponse) {
     && isValidCitation(response.citation);
 }
 
-function milestoneIdentity(state: JourneyState, task: OdysseyTask, correct: boolean): JourneyState["identity"] {
+function milestoneIdentity(state: JourneyState, task: OdysseyTask, correct: boolean, response?: TaskResponse): JourneyState["identity"] {
   if (!correct) return state.identity;
   if (state.identity === "Contributor") return "Contributor";
   if (task.type === "contribution") return "Contributor";
   if (state.identity === "Fact-checker") return "Fact-checker";
-  if (task.type === "fact-check") return "Fact-checker";
+  if (task.type === "fact-check" && response?.verdict === "no" && isValidCitation(response.citation)) return "Fact-checker";
   return state.identity === "Reader" ? "Explorer" : state.identity;
 }
 
-export function completeCurrentTask(state: JourneyState, task: OdysseyTask, correct: boolean): JourneyState {
+export function completeCurrentTask(state: JourneyState, task: OdysseyTask, correct: boolean, response?: TaskResponse): JourneyState {
   if (state.phase !== "question" || state.statuses[state.currentStep] !== "current") return state;
 
   const statuses = [...state.statuses];
   statuses[state.currentStep] = correct ? "correct" : "wrong";
-  const identity = milestoneIdentity(state, task, correct);
+  const identity = milestoneIdentity(state, task, correct, response);
   const lastIdentityPromotion = identity !== state.identity && identity !== "Reader" ? identity : undefined;
   const pointsEarned = correct ? task.points : 0;
   return {

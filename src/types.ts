@@ -5,6 +5,8 @@ export type TaskType =
   | "fact-check"
   | "contribution";
 
+export type AnswerFormat = "text" | "number" | "mixed";
+
 export type StepStatus = "pending" | "current" | "correct" | "wrong" | "skipped";
 
 export type JourneyPhase =
@@ -38,6 +40,15 @@ export interface OdysseyTask {
   existingText?: string;
   requiresCitation?: boolean;
   recommendationTopics?: string[];
+  answerFormat?: AnswerFormat;
+  allowsArticleSelection?: boolean;
+  verificationBranches?: Array<"yes" | "no">;
+}
+
+export interface TopicModule {
+  topic: string;
+  articleSectionId: string;
+  tasks: [OdysseyTask, OdysseyTask, OdysseyTask];
 }
 
 export interface TaskResponse {

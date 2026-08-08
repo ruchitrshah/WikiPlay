@@ -55,7 +55,8 @@ describe("Odyssey scoring and progression", () => {
   });
 
   it("promotes successful source work to fact-checker and contributor", () => {
-    const factChecker = completeCurrentTask(stateAtStep(3), tasks[3], true);
+    const sourcedVerification = { ...emptyResponse(), verdict: "no" as const, correction: "808,988", citation: "https://www.census.gov/" };
+    const factChecker = completeCurrentTask(stateAtStep(3), tasks[3], true, sourcedVerification);
     expect(factChecker.identity).toBe("Fact-checker");
     expect(factChecker.lastIdentityPromotion).toBe("Fact-checker");
     const contributor = completeCurrentTask(advanceJourney(factChecker), tasks[4], true);
@@ -123,7 +124,23 @@ describe("task validation", () => {
     const complete = { ...incomplete, citation: "https://www.census.gov/" };
     expect(canSubmit(tasks[3], complete)).toBe(true);
     expect(evaluateTask(tasks[3], complete)).toBe(true);
-    expect(evaluateTask(tasks[3], { ...complete, correction: "123,456" })).toBe(false);
+    expect(evaluateTask(tasks[3], { ...complete, correction: "123,456" })).toBe(true);
+  });
+
+  it("accepts either complete verification branch without mis-scoring", () => {
+    const yes = { ...emptyResponse(), verdict: "yes" as const };
+    expect(canSubmit(tasks[3], yes)).toBe(true);
+    expect(evaluateTask(tasks[3], yes)).toBe(true);
+    expect(completeCurrentTask(stateAtStep(3), tasks[3], true, yes)).toMatchObject({ score: 4, identity: "Explorer" });
+
+    const no = { ...emptyResponse(), verdict: "no" as const, correction: "808,988", citation: "https://www.census.gov/" };
+    expect(completeCurrentTask(stateAtStep(3), tasks[3], true, no)).toMatchObject({ score: 4, identity: "Fact-checker" });
+  });
+
+  it("enforces numeric and text response formats", () => {
+    expect(canSubmit(tasks[3], { ...emptyResponse(), verdict: "no", correction: "about eight hundred thousand", citation: "https://example.com" })).toBe(false);
+    expect(canSubmit(tasks[3], { ...emptyResponse(), verdict: "no", correction: "808,988", citation: "https://example.com" })).toBe(true);
+    expect(canSubmit(tasks[2], { ...emptyResponse(), text: "928" })).toBe(false);
   });
 
   it("requires meaningful contribution copy and an http citation", () => {
@@ -142,9 +159,10 @@ describe("task validation", () => {
   });
 
   it("resolves flexible rounds to a selected topic", () => {
-    const task = resolveTask(5, "Indigenous history");
-    expect(task.topic).toBe("Indigenous history");
-    expect(task.articlePassageId).toBe("indigenous-history");
+    const moduleTasks = [5, 6, 7].map((step) => resolveTask(step, "Indigenous history"));
+    expect(moduleTasks.map((task) => task.type)).toEqual(["single-choice", "fact-check", "contribution"]);
+    expect(moduleTasks.every((task) => task.topic === "Indigenous history")).toBe(true);
+    expect(moduleTasks.every((task) => task.articlePassageId === "indigenous-history")).toBe(true);
   });
 
   it("prepares flexible questions for expanded article sections", () => {

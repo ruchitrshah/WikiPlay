@@ -19,6 +19,22 @@ function prefersReducedMotion() {
   return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 }
 
+function usePhoneLayout() {
+  const query = "(max-width: 767px)";
+  const [matches, setMatches] = useState(() => window.matchMedia?.(query).matches ?? false);
+
+  useEffect(() => {
+    const media = window.matchMedia?.(query);
+    if (!media) return;
+    const update = () => setMatches(media.matches);
+    update();
+    media.addEventListener?.("change", update);
+    return () => media.removeEventListener?.("change", update);
+  }, []);
+
+  return matches;
+}
+
 function focusAfterRender(selector: string) {
   window.setTimeout(() => document.querySelector<HTMLElement>(selector)?.focus(), 0);
 }
@@ -26,6 +42,7 @@ function focusAfterRender(selector: string) {
 export function App() {
   const [state, setState] = useState(initialJourneyState);
   const [showInvitation, setShowInvitation] = useState(true);
+  const isPhone = usePhoneLayout();
   const wasStarted = useRef(state.started);
   const task = useMemo(() => resolveTask(state.currentStep, state.selectedTopic), [state.currentStep, state.selectedTopic]);
   const response = state.responses[task.id] ?? emptyResponse();
@@ -63,7 +80,7 @@ export function App() {
 
   const submit = () => {
     const correct = evaluateTask(task, response);
-    setState((current) => completeCurrentTask(current, task, correct));
+    setState((current) => completeCurrentTask(current, task, correct, response));
   };
 
   const chooseTopic = (selectedTopic: string) => {
@@ -129,7 +146,7 @@ export function App() {
         </aside>
       )}
 
-      <OdysseyPanel
+      {!isPhone && <OdysseyPanel
         isActive={state.started}
         state={state}
         task={task}
@@ -144,7 +161,27 @@ export function App() {
         onTopic={chooseTopic}
         onReset={reset}
         onExit={exit}
-      />
+      />}
+
+      {state.started && isPhone && (
+        <section className="mobile-wikiplay" aria-labelledby="mobile-wikiplay-title">
+          <button className="mobile-wikiplay-close" type="button" aria-label="Close WikiPlay" onClick={exit}><X size={18} /></button>
+          <img className="mobile-wikiplay-mark" src="/wikiplay-blue.png" alt="" aria-hidden="true" />
+          <span className="mobile-eyebrow">WikiPlay for the web</span>
+          <h1 id="mobile-wikiplay-title">Turn reading into small, meaningful contributions.</h1>
+          <p>WikiPlay helps you learn from an article, verify claims, and draft sourced updates through eight guided rounds.</p>
+          <div className="mobile-video-shell">
+            <video controls playsInline preload="metadata" poster="/WikiPlay.png" aria-label="WikiPlay experience overview">
+              <source src="/media/WikiPlay.mp4" type="video/mp4" />
+              Your browser does not support embedded video.
+            </video>
+          </div>
+          <div className="mobile-device-note">
+            <strong>Continue on a tablet or computer</strong>
+            <span>The contribution experience uses the article and task panel side by side, so it is not available on phones yet.</span>
+          </div>
+        </section>
+      )}
     </main>
   );
 }

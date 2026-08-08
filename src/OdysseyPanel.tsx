@@ -1,5 +1,6 @@
 import { useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
+import * as Dialog from "@radix-ui/react-dialog";
 import {
   ArrowCounterClockwise,
   ArrowRight,
@@ -13,11 +14,12 @@ import {
   Sparkle,
   Trophy,
   UsersThree,
+  Question,
   X,
   XCircle,
 } from "@phosphor-icons/react";
 import { topics } from "./data";
-import { canSubmit, isValidCitation } from "./journey";
+import { canSubmit, isValidAnswerFormat, isValidCitation } from "./journey";
 import { AnimatedCount, Badge, Button, PanelTransition, ScoreTicker } from "./OdysseyUi";
 import { KnowledgeSpark } from "./DelightAnimation";
 import type { JourneyState, OdysseyTask, TaskResponse, StepStatus } from "./types";
@@ -126,12 +128,37 @@ function ChoiceList({ task, response, onResponse }: Pick<OdysseyPanelProps, "tas
   );
 }
 
+function SourceGuidanceDialog() {
+  return (
+    <Dialog.Root>
+      <Dialog.Trigger asChild>
+        <button className="source-help-trigger" type="button"><Question size={16} weight="bold" /> What makes a source reliable?</button>
+      </Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Overlay className="source-dialog-overlay" />
+        <Dialog.Content className="source-dialog" aria-describedby="source-dialog-description">
+          <Dialog.Close className="source-dialog-close" aria-label="Close source guidance"><X size={16} /></Dialog.Close>
+          <div className="source-dialog-icon"><BookOpenText size={32} weight="duotone" /></div>
+          <Dialog.Title>Choose a source readers can trust</Dialog.Title>
+          <Dialog.Description id="source-dialog-description">A reliable source is published, directly supports your update, and has a reputation for editorial review or fact-checking.</Dialog.Description>
+          <div className="source-examples">
+            <section><h3>Good choices</h3><ul><li>Government data and public records</li><li>Peer-reviewed research and academic books</li><li>Established newsrooms with editorial oversight</li></ul></section>
+            <section><h3>Avoid</h3><ul><li>Personal blogs and social posts</li><li>User-generated or promotional pages</li><li>Wikipedia itself as the source</li></ul></section>
+          </div>
+          <a className="source-policy-link" href="https://en.wikipedia.org/wiki/Wikipedia:Reliable_sources" target="_blank" rel="noreferrer">Read Wikipedia's sourcing guidance <ArrowRight size={15} /></a>
+          <Dialog.Close asChild><Button>Got It</Button></Dialog.Close>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
 function CitationField({ value, onChange, disabled = false }: { value: string; onChange: (value: string) => void; disabled?: boolean }) {
   const invalid = value.length > 0 && !isValidCitation(value);
   const errorId = "citation-error";
   return (
     <div className={`field-group${invalid ? " invalid" : ""}`}>
-      <label htmlFor="citation-url">Reliable source URL</label>
+      <div className="field-label-row"><label htmlFor="citation-url">Reliable source URL</label><SourceGuidanceDialog /></div>
       <div className="citation-field">
         <LinkSimple size={18} aria-hidden="true" />
         <input
@@ -151,6 +178,11 @@ function CitationField({ value, onChange, disabled = false }: { value: string; o
 }
 
 function QuestionForm({ task, response, onResponse }: Pick<OdysseyPanelProps, "task" | "response" | "onResponse">) {
+  const updateFormattedValue = (value: string, key: "text" | "correction") => {
+    if (task.answerFormat === "number" && /[A-Za-z]/.test(value)) return;
+    if (task.answerFormat === "text" && /\d/.test(value)) return;
+    onResponse({ ...response, [key]: value });
+  };
   if (task.type === "single-choice" || task.type === "multiple-choice") {
     return <ChoiceList task={task} response={response} onResponse={onResponse} />;
   }
@@ -162,8 +194,10 @@ function QuestionForm({ task, response, onResponse }: Pick<OdysseyPanelProps, "t
         <input
           autoComplete="off"
           value={response.text}
-          onChange={(event) => onResponse({ ...response, text: event.target.value })}
-          placeholder="Type one or two words"
+          onChange={(event) => updateFormattedValue(event.target.value, "text")}
+          placeholder="Drag-select from the article or type your answer"
+          inputMode={task.answerFormat === "number" ? "numeric" : "text"}
+          aria-invalid={response.text.length > 0 && !isValidAnswerFormat(response.text, task.answerFormat)}
         />
       </label>
     );
@@ -204,8 +238,10 @@ function QuestionForm({ task, response, onResponse }: Pick<OdysseyPanelProps, "t
               <span>What is the current information?</span>
               <input
                 value={response.correction}
-                onChange={(event) => onResponse({ ...response, correction: event.target.value })}
-                placeholder={task.id === "population-check" ? "Enter the current figure" : "Enter a precise correction"}
+                onChange={(event) => updateFormattedValue(event.target.value, "correction")}
+                placeholder={task.answerFormat === "number" ? "Drag-select or enter the current number" : "Drag-select or enter accurate text"}
+                inputMode={task.answerFormat === "number" ? "numeric" : "text"}
+                aria-invalid={response.correction.length > 0 && !isValidAnswerFormat(response.correction, task.answerFormat)}
               />
             </label>
             <CitationField value={response.citation} onChange={(citation) => onResponse({ ...response, citation })} />
@@ -219,19 +255,19 @@ function QuestionForm({ task, response, onResponse }: Pick<OdysseyPanelProps, "t
     <div className="contribution-form">
       {response.selectedText ? (
         <div className="selected-source">
-          <span>Selected article text</span>
+          <span>Your selected article text</span>
           <blockquote>{response.selectedText}</blockquote>
         </div>
       ) : (
-        <p className="selection-empty">Drag across any article text on the left to choose what you want to improve.</p>
+        <p className="selection-empty">Drag across any article text on the left to select what you want to update.</p>
       )}
       <label className="text-field">
-        <span>Your replacement</span>
+        <span>Enter updated or more accurate information</span>
         <textarea
-          aria-label="Your replacement"
+          aria-label="Enter updated or more accurate information"
           value={response.text}
           onChange={(event) => onResponse({ ...response, text: event.target.value })}
-          placeholder="Write the corrected replacement"
+          placeholder="Write a concise, verifiable update"
           disabled={!response.selectedText}
         />
         <small>{response.text.trim().length} of 25 minimum characters</small>
@@ -252,7 +288,7 @@ function TopicRecommendations({ selected, onTopic }: { selected?: string; onTopi
 
   return (
     <div className="recommendation-card">
-      <p>Choose your path by exploring a different topic in the next flexible round.</p>
+      <p>Choose a topic for your final Learn, Verify, and Contribute rounds.</p>
       <div className="topic-chips">
         {visibleTopics.map((topic) => (
           <Button key={topic} variant="ghost" className={selected === topic ? "topic-chip selected" : "topic-chip"} aria-pressed={selected === topic} onClick={() => choose(topic)}>
@@ -358,11 +394,9 @@ function CompletionCard({ state, onReset }: Pick<OdysseyPanelProps, "state" | "o
       <div className="trophy-wrap completion-piece">
         <KnowledgeSpark className="completion-spark" delay={180} fallback={<Trophy size={58} weight="duotone" aria-hidden="true" />} />
       </div>
-      <span className="eyebrow completion-piece">WikiPlay Complete</span>
-      <h1 className="completion-piece">You Made Knowledge Better.</h1>
+      <h1 className="completion-piece">This page is viewed by ~5,800 readers daily.</h1>
       <div className="completion-impact completion-piece">
-        <p>This page is viewed by ~5,800 readers daily.</p>
-        <p>Small improvements create lasting impact when they help thousands of readers access more accurate information every day.</p>
+        <p>Small improvements create lasting impact by helping readers access more accurate information every day.</p>
       </div>
       <div className="summary-grid">
         <div><strong><AnimatedCount value={state.score} delay={720} label={`${state.score} ${state.score === 1 ? "point" : "points"}`} /></strong><span>Points</span></div>

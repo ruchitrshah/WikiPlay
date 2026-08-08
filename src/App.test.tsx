@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 
 function dragSelectArticleText(element: HTMLElement) {
@@ -152,7 +152,7 @@ describe("Wikipedia Odyssey", () => {
       fireEvent.click(screen.getByRole("button", { name: /continue playing/i }));
     }
 
-    const replacement = screen.getByLabelText("Your replacement");
+    const replacement = screen.getByLabelText("Enter updated or more accurate information");
     const citation = screen.getByLabelText("Reliable source URL");
     const submit = screen.getByRole("button", { name: "Submit" });
     expect(replacement).toBeDisabled();
@@ -183,13 +183,13 @@ describe("Wikipedia Odyssey", () => {
 
     const firstLine = screen.getByText("More recent estimates indicate that the city's population has since changed.");
     dragSelectArticleText(firstLine);
-    fireEvent.change(screen.getByLabelText("Your replacement"), { target: { value: "A detailed replacement that is long enough to submit." } });
+    fireEvent.change(screen.getByLabelText("Enter updated or more accurate information"), { target: { value: "A detailed replacement that is long enough to submit." } });
     fireEvent.change(screen.getByLabelText("Reliable source URL"), { target: { value: "https://example.com/source" } });
 
     const secondLine = document.getElementById("race-statement");
     expect(secondLine).not.toBeNull();
     dragSelectArticleText(secondLine as HTMLElement);
-    expect(screen.getByLabelText("Your replacement")).toHaveValue("");
+    expect(screen.getByLabelText("Enter updated or more accurate information")).toHaveValue("");
     expect(screen.getByLabelText("Reliable source URL")).toHaveValue("");
     expect(document.querySelector(".selected-source blockquote")).toHaveTextContent("As of the 2020 census");
   });
@@ -235,6 +235,38 @@ describe("Wikipedia Odyssey", () => {
     expect(screen.getByRole("button", { name: "Submit" })).toBeEnabled();
   });
 
+  it("awards fact-check points for a Yes verdict without requiring a source", () => {
+    render(<App />);
+    startWikiPlay();
+    for (let step = 0; step < 3; step += 1) {
+      fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+      fireEvent.click(screen.getByRole("button", { name: /continue playing/i }));
+    }
+
+    fireEvent.click(screen.getByLabelText("Yes"));
+    expect(screen.queryByLabelText("Reliable source URL")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+    expect(within(document.querySelector(".score-pill") as HTMLElement).getByText("4 total points")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /explorer/i })).toBeInTheDocument();
+  });
+
+  it("explains reliable sources in a keyboard-dismissible dialog", async () => {
+    render(<App />);
+    startWikiPlay();
+    for (let step = 0; step < 3; step += 1) {
+      fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+      fireEvent.click(screen.getByRole("button", { name: /continue playing/i }));
+    }
+
+    fireEvent.click(screen.getByLabelText("No"));
+    const trigger = screen.getByRole("button", { name: /what makes a source reliable/i });
+    fireEvent.click(trigger);
+    expect(screen.getByRole("dialog", { name: /choose a source readers can trust/i })).toBeInTheDocument();
+    expect(screen.getByText(/government data and public records/i)).toBeInTheDocument();
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+    await waitFor(() => expect(trigger).toHaveFocus());
+  });
+
   it("clears a selected fact-check verdict without erasing its draft", () => {
     render(<App />);
     startWikiPlay();
@@ -263,9 +295,9 @@ describe("Wikipedia Odyssey", () => {
       fireEvent.click(panelQueries.getByRole("button", { name: /continue playing/i }));
     }
 
-    expect(screen.getByRole("heading", { name: "You Made Knowledge Better." })).toBeInTheDocument();
-    expect(screen.getByText("This page is viewed by ~5,800 readers daily.")).toBeInTheDocument();
-    expect(screen.getByText("Small improvements create lasting impact when they help thousands of readers access more accurate information every day.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "This page is viewed by ~5,800 readers daily." })).toBeInTheDocument();
+    expect(screen.getByText("Small improvements create lasting impact by helping readers access more accurate information every day.")).toBeInTheDocument();
+    expect(screen.queryByText("You Made Knowledge Better.")).not.toBeInTheDocument();
     expect(screen.queryByText(/that means more accurate information/i)).not.toBeInTheDocument();
     expect(screen.getByLabelText("8 skipped questions")).toHaveClass("animated-count");
     expect(document.querySelectorAll(".summary-grid .animated-count > span[aria-hidden='true']")).toHaveLength(4);
@@ -305,11 +337,11 @@ describe("Wikipedia Odyssey", () => {
   it("shows topic recommendations only after an answer is submitted", () => {
     render(<App />);
     startWikiPlay();
-    expect(screen.queryByText(/choose your path by exploring/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/choose a topic for your final/i)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText("Hurricane"));
     fireEvent.click(screen.getByRole("button", { name: "Submit" }));
-    expect(screen.getByText(/choose your path/i)).toBeInTheDocument();
+    expect(screen.getByText(/choose a topic for your final learn, verify, and contribute rounds/i)).toBeInTheDocument();
   });
 
   it("dismisses the invitation and returns focus to the Wikipedia header launcher", async () => {
@@ -332,5 +364,29 @@ describe("Wikipedia Odyssey", () => {
     await waitFor(() => expect(launcher).toHaveFocus());
     fireEvent.click(launcher);
     expect(screen.getByText(/score 1\. 5 chances remaining/i)).toBeInTheDocument();
+  });
+
+  it("shows a video explainer instead of the contribution rail on phones", () => {
+    const matchMedia = vi.spyOn(window, "matchMedia").mockImplementation((query) => ({
+      matches: query === "(max-width: 767px)",
+      media: query,
+      onchange: null,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      dispatchEvent: () => true,
+    }));
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: /start wikiplay/i }));
+
+    expect(screen.queryByRole("complementary", { name: "WikiPlay" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /turn reading into small, meaningful contributions/i })).toBeInTheDocument();
+    const video = screen.getByLabelText("WikiPlay experience overview");
+    expect(video).toHaveAttribute("controls");
+    expect(video).toHaveAttribute("playsinline");
+    expect(video).not.toHaveAttribute("autoplay");
+    expect(screen.getByText(/continue on a tablet or computer/i)).toBeInTheDocument();
+    matchMedia.mockRestore();
   });
 });

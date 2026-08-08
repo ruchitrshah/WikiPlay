@@ -1,230 +1,69 @@
-import type { OdysseyTask } from "./types";
+import type { OdysseyTask, TaskOption, TopicModule } from "./types";
 
-export const topics = [
-  "Population",
-  "Indigenous history",
-  "Race",
-  "Neighborhoods",
-  "Economy",
-  "Climate",
-  "Arts and culture",
-  "Parks",
-  "Sports",
-  "Government",
-  "Education",
+interface ModuleSeed {
+  topic: string;
+  section: string;
+  passage: string;
+  question: string;
+  options: TaskOption[];
+  correct: string;
+  claim: string;
+  format: "text" | "number";
+  explanation: string;
+}
+
+const moduleSeeds: ModuleSeed[] = [
+  { topic: "History", section: "history", passage: "history-earthquake", question: "What event reshaped San Francisco in 1906?", options: [{ id: "earthquake", label: "Earthquake and fire" }, { id: "flood", label: "Flood" }, { id: "hurricane", label: "Hurricane" }], correct: "earthquake", claim: "The 1906 earthquake and fires destroyed more than three-quarters of the city.", format: "text", explanation: "The earthquake and subsequent fires transformed the city and accelerated a major rebuilding effort." },
+  { topic: "Indigenous history", section: "history", passage: "indigenous-history", question: "Which Indigenous people lived in the area before European settlement?", options: [{ id: "ramaytush", label: "Ramaytush Ohlone" }, { id: "navajo", label: "Navajo" }, { id: "seminole", label: "Seminole" }], correct: "ramaytush", claim: "The Yelamu, a Ramaytush Ohlone community, lived on the San Francisco Peninsula.", format: "text", explanation: "The Yelamu were part of the Ramaytush Ohlone people whose communities lived across the peninsula." },
+  { topic: "Geography", section: "geography", passage: "mount-davidson", question: "What is San Francisco's highest natural point?", options: [{ id: "davidson", label: "Mount Davidson" }, { id: "twin", label: "Twin Peaks" }, { id: "sutro", label: "Mount Sutro" }], correct: "davidson", claim: "Mount Davidson is the city's highest natural point at about 934 feet.", format: "number", explanation: "Mount Davidson rises above the city's many hills and is capped by a large concrete cross." },
+  { topic: "Climate", section: "climate", passage: "climate-statement", question: "Which climate type best describes San Francisco?", options: [{ id: "mediterranean", label: "Warm-summer Mediterranean" }, { id: "continental", label: "Humid continental" }, { id: "tropical", label: "Tropical rainforest" }], correct: "mediterranean", claim: "San Francisco has a warm-summer Mediterranean climate.", format: "text", explanation: "Ocean currents, coastal winds, and fog moderate temperatures throughout the year." },
+  { topic: "Population", section: "demographics", passage: "population-statement", question: "Which figure is the 2020 census population?", options: [{ id: "873965", label: "873,965" }, { id: "808988", label: "808,988" }, { id: "826079", label: "826,079" }], correct: "873965", claim: "The 2020 census recorded 873,965 residents.", format: "number", explanation: "Census counts and newer annual estimates describe different dates and should be labeled precisely." },
+  { topic: "Race", section: "demographics", passage: "race-statement", question: "Which census anchors the article's current demographic profile?", options: [{ id: "2020", label: "2020 census" }, { id: "1990", label: "1990 census" }, { id: "1950", label: "1950 census" }], correct: "2020", claim: "San Francisco is a majority-minority city.", format: "text", explanation: "The section describes a diverse population using census categories and community histories." },
+  { topic: "Neighborhoods", section: "neighborhoods", passage: "neighborhood-landmarks", question: "Which street is famous for a steep block with eight hairpin turns?", options: [{ id: "lombard", label: "Lombard Street" }, { id: "market", label: "Market Street" }, { id: "mission", label: "Mission Street" }], correct: "lombard", claim: "Lombard Street's Russian Hill block has eight hairpin turns.", format: "number", explanation: "The landscaped block is one of the city's most recognizable neighborhood landmarks." },
+  { topic: "Economy", section: "economy", passage: "economy-statement", question: "Which sector is central to San Francisco's modern economy?", options: [{ id: "technology", label: "Technology" }, { id: "mining", label: "Mining" }, { id: "agriculture", label: "Agriculture" }], correct: "technology", claim: "San Francisco proper produced about $268 billion in GDP in 2024.", format: "number", explanation: "Technology, finance, professional services, healthcare, and tourism all shape the city's economy." },
+  { topic: "Arts and culture", section: "arts-culture", passage: "arts-statement", question: "Which museum focuses on modern and contemporary art?", options: [{ id: "sfmoma", label: "SFMOMA" }, { id: "met", label: "The Met" }, { id: "getty", label: "The Getty" }], correct: "sfmoma", claim: "SFMOMA is one of the country's largest museums of modern and contemporary art.", format: "text", explanation: "The city supports museums, performing arts, festivals, and influential cultural movements." },
+  { topic: "Sports", section: "sports", passage: "sports-statement", question: "Which baseball team plays at Oracle Park?", options: [{ id: "giants", label: "San Francisco Giants" }, { id: "athletics", label: "Athletics" }, { id: "padres", label: "San Diego Padres" }], correct: "giants", claim: "The Giants play their home games at Oracle Park.", format: "text", explanation: "San Francisco hosts major professional teams and numerous international sporting events." },
+  { topic: "Parks", section: "parks", passage: "parks-statement", question: "Which major park stretches west toward the Pacific Ocean?", options: [{ id: "golden-gate", label: "Golden Gate Park" }, { id: "central", label: "Central Park" }, { id: "balboa", label: "Balboa Park" }], correct: "golden-gate", claim: "Golden Gate Park covers more than 1,000 acres.", format: "number", explanation: "The city's park system ranges from neighborhood squares to beaches and large regional landscapes." },
+  { topic: "Government", section: "government", passage: "government-statement", question: "How many districts elect members to the Board of Supervisors?", options: [{ id: "11", label: "11" }, { id: "7", label: "7" }, { id: "15", label: "15" }], correct: "11", claim: "The Board of Supervisors has 11 elected members.", format: "number", explanation: "San Francisco is both a city and county, with an elected mayor and district supervisors." },
+  { topic: "Education", section: "education", passage: "education-statement", question: "Which university specializes in graduate health sciences?", options: [{ id: "ucsf", label: "UCSF" }, { id: "ucd", label: "UC Davis" }, { id: "ucsc", label: "UC Santa Cruz" }], correct: "ucsf", claim: "UCSF is dedicated to graduate-level health sciences.", format: "text", explanation: "Public, private, arts, and professional institutions make the city a major education center." },
+  { topic: "Media", section: "media", passage: "media-statement", question: "Which newspaper is historically associated with San Francisco?", options: [{ id: "chronicle", label: "San Francisco Chronicle" }, { id: "tribune", label: "Chicago Tribune" }, { id: "globe", label: "Boston Globe" }], correct: "chronicle", claim: "The San Francisco Chronicle is the region's largest daily newspaper.", format: "text", explanation: "The city has a long history of newspapers, broadcasting, independent publishing, and digital media." },
+  { topic: "Infrastructure", section: "infrastructure", passage: "transport-options", question: "Which regional rail system crosses beneath the bay?", options: [{ id: "bart", label: "BART" }, { id: "muni", label: "Muni" }, { id: "caltrain", label: "Caltrain" }], correct: "bart", claim: "BART connects San Francisco with the East Bay through the Transbay Tube.", format: "text", explanation: "Rail, buses, ferries, streets, airports, cycling, and walking connect a compact, hilly city." },
+  { topic: "Sister cities", section: "sister-cities", passage: "sister-cities-statement", question: "What do sister-city partnerships encourage?", options: [{ id: "exchange", label: "Cultural and economic exchange" }, { id: "annexation", label: "Municipal annexation" }, { id: "zoning", label: "Shared zoning laws" }], correct: "exchange", claim: "San Francisco maintains sister-city relationships across several continents.", format: "text", explanation: "Sister-city partnerships support cultural, educational, and economic exchange." },
+  { topic: "Notable people", section: "notable-people", passage: "notable-people-statement", question: "Why is the notable-people section organized as a separate list?", options: [{ id: "breadth", label: "The list is extensive" }, { id: "none", label: "No notable people are associated with the city" }, { id: "private", label: "The information is private" }], correct: "breadth", claim: "The city is associated with notable figures across politics, science, arts, business, and sports.", format: "text", explanation: "A linked list keeps a broad set of biographies navigable without overwhelming the main article." },
 ];
 
+export const topics = moduleSeeds.map(({ topic }) => topic);
 const recommendations = [...topics];
 
-export const tasks: OdysseyTask[] = [
-  {
-    id: "disaster",
-    type: "single-choice",
-    topic: "History",
-    articleSectionId: "history",
-    articlePassageId: "history-earthquake",
-    instruction: "Choose one answer using the article section on the left.",
-    question: "What natural disaster struck San Francisco in 1906?",
-    points: 1,
-    options: [
-      { id: "flood", label: "Flood" },
-      { id: "earthquake", label: "Earthquake and fire" },
-      { id: "hurricane", label: "Hurricane" },
-      { id: "tornado", label: "Tornado" },
+function makeModule(seed: ModuleSeed): TopicModule {
+  const slug = seed.topic.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  const base = { topic: seed.topic, articleSectionId: seed.section, articlePassageId: seed.passage };
+  return {
+    topic: seed.topic,
+    articleSectionId: seed.section,
+    tasks: [
+      { ...base, id: `${slug}-learn`, type: "single-choice", instruction: "Choose one answer using the article section on the left.", question: seed.question, points: 1, options: seed.options, correctOptionIds: [seed.correct], explanation: seed.explanation },
+      { ...base, id: `${slug}-verify`, type: "fact-check", instruction: "Verify this claim with a reliable source outside Wikipedia.", question: `${seed.claim} Is this information current?`, points: 4, options: [{ id: "yes", label: "Yes" }, { id: "no", label: "No" }], explanation: "Confirm the claim or provide a more accurate replacement supported by a reliable source.", requiresCitation: true, answerFormat: seed.format, allowsArticleSelection: true, verificationBranches: ["yes", "no"] },
+      { ...base, id: `${slug}-contribute`, type: "contribution", instruction: "Drag across any article text on the left to select what you want to update.", question: `Improve information about ${seed.topic.toLowerCase()} with a sourced replacement.`, points: 5, explanation: "A focused, clearly written update with a trustworthy source is easier for volunteer editors to review.", impactMessage: "Your draft is ready for community review.", requiresCitation: true, answerFormat: "mixed", allowsArticleSelection: true },
     ],
-    correctOptionIds: ["earthquake"],
-    explanation:
-      "The 1906 earthquake and subsequent fires destroyed more than three-quarters of San Francisco. The city was quickly rebuilt.",
-    recommendationTopics: recommendations,
-  },
-  {
-    id: "transport",
-    type: "multiple-choice",
-    topic: "Infrastructure",
-    articleSectionId: "infrastructure",
-    articlePassageId: "transport-options",
-    instruction: "Choose every answer supported by the article section on the left.",
-    question: "Which public transportation systems help keep this hilly city moving?",
-    points: 2,
-    options: [
-      { id: "caltrain", label: "Caltrain" },
-      { id: "muni", label: "Muni" },
-      { id: "metro-sf", label: "Metro SF" },
-      { id: "bart", label: "BART" },
-    ],
-    correctOptionIds: ["caltrain", "muni", "bart"],
-    explanation:
-      "Muni, BART, and Caltrain form the core of public transportation in and around San Francisco. “Metro SF” is not a transit agency.",
-  },
-  {
-    id: "tallest-hill",
-    type: "short-answer",
-    topic: "Geography",
-    articleSectionId: "geography",
-    articlePassageId: "mount-davidson",
-    instruction: "Drag-select the answer from the article, or type one or two words.",
-    question: "Which is the tallest hill in San Francisco?",
-    points: 2,
-    acceptedAnswers: ["mount davidson", "mt davidson", "mt. davidson"],
-    explanation: "Mount Davidson is San Francisco's tallest natural point at 928 feet (283 m).",
-    recommendationTopics: recommendations,
-  },
-  {
-    id: "population-check",
-    type: "fact-check",
-    topic: "Population",
-    articleSectionId: "demographics",
-    articlePassageId: "population-statement",
-    instruction: "Verify this claim with a reliable source outside Wikipedia.",
-    question: "This page says San Francisco's population is 873,965. Is that information current?",
-    points: 4,
-    options: [
-      { id: "yes", label: "Yes" },
-      { id: "no", label: "No" },
-    ],
-    correctOptionIds: ["no"],
-    acceptedAnswers: ["808988", "808,988"],
-    explanation:
-      "The figure shown was from the 2020 census. A newer estimate should replace it and be supported by a reliable citation.",
-    impactMessage:
-      "This page is viewed by 5,800 readers monthly. Your contribution will help readers find more accurate information.",
-    requiresCitation: true,
-    recommendationTopics: recommendations,
-  },
-  {
-    id: "population-update",
-    type: "contribution",
-    topic: "Population",
-    articleSectionId: "demographics",
-    articlePassageId: "population-statement",
-    instruction: "Highlight any article text, then replace it using a reliable source.",
-    question: "Improve outdated information with a sourced replacement.",
-    points: 5,
-    existingText:
-      "The 2020 United States census showed San Francisco's population to be 873,965, an increase of 8.5% from the 2010 census.",
-    explanation:
-      "Strong contributions make a focused change, explain the update clearly, and cite a trustworthy source.",
-    impactMessage: "You moved from checking knowledge to improving it for the next reader.",
-    requiresCitation: true,
-    recommendationTopics: recommendations,
-  },
-  {
-    id: "neighborhoods",
-    type: "single-choice",
-    topic: "Neighborhoods",
-    articleSectionId: "neighborhoods",
-    articlePassageId: "neighborhood-landmarks",
-    instruction: "Choose one answer using the article section on the left.",
-    question: "Which San Francisco street is famous for its steep, crooked section?",
-    points: 1,
-    options: [
-      { id: "market", label: "Market Street" },
-      { id: "lombard", label: "Lombard Street" },
-      { id: "mission", label: "Mission Street" },
-      { id: "van-ness", label: "Van Ness Avenue" },
-    ],
-    correctOptionIds: ["lombard"],
-    explanation:
-      "Lombard Street is known internationally for the eight hairpin turns in its steep Russian Hill block.",
-    recommendationTopics: recommendations,
-  },
-  {
-    id: "economy-check",
-    type: "fact-check",
-    topic: "Economy",
-    articleSectionId: "economy",
-    articlePassageId: "economy-statement",
-    instruction: "Verify one more claim with a reliable source outside Wikipedia.",
-    question: "The article calls tourism San Francisco's largest private-sector industry. Is that claim sufficiently precise?",
-    points: 4,
-    options: [
-      { id: "yes", label: "Yes" },
-      { id: "no", label: "No" },
-    ],
-    correctOptionIds: ["no"],
-    explanation:
-      "Broad economic claims can become misleading as industries change. A precise date, measure, and citation make the statement verifiable.",
-    requiresCitation: true,
-    recommendationTopics: recommendations,
-  },
-  {
-    id: "final-contribution",
-    type: "contribution",
-    topic: "Selected topic",
-    articleSectionId: "economy",
-    articlePassageId: "economy-statement",
-    instruction: "Highlight any article text, then replace it using a reliable source.",
-    question: "Make one final sourced improvement to complete WikiPlay.",
-    points: 5,
-    existingText:
-      "San Francisco is a global center of economic activity, technology, arts, sciences, and tourism.",
-    explanation:
-      "A concise, sourced addition is easier for volunteer editors to review and more useful to readers.",
-    impactMessage: "Your contribution is ready for community review.",
-    requiresCitation: true,
-  },
+  };
+}
+
+export const topicModules: Record<string, TopicModule> = Object.fromEntries(moduleSeeds.map((seed) => [seed.topic, makeModule(seed)]));
+
+const commonTasks: OdysseyTask[] = [
+  { id: "disaster", type: "single-choice", topic: "History", articleSectionId: "history", articlePassageId: "history-earthquake", instruction: "Choose one answer using the article section on the left.", question: "What natural disaster struck San Francisco in 1906?", points: 1, options: [{ id: "flood", label: "Flood" }, { id: "earthquake", label: "Earthquake and fire" }, { id: "hurricane", label: "Hurricane" }, { id: "tornado", label: "Tornado" }], correctOptionIds: ["earthquake"], explanation: "The 1906 earthquake and subsequent fires destroyed more than three-quarters of San Francisco. The city was quickly rebuilt.", recommendationTopics: recommendations },
+  { id: "transport", type: "multiple-choice", topic: "Infrastructure", articleSectionId: "infrastructure", articlePassageId: "transport-options", instruction: "Choose every answer supported by the article section on the left.", question: "Which public transportation systems help keep this hilly city moving?", points: 2, options: [{ id: "caltrain", label: "Caltrain" }, { id: "muni", label: "Muni" }, { id: "metro-sf", label: "Metro SF" }, { id: "bart", label: "BART" }], correctOptionIds: ["caltrain", "muni", "bart"], explanation: "Muni, BART, and Caltrain form the core of public transportation in and around San Francisco." },
+  { id: "tallest-hill", type: "short-answer", topic: "Geography", articleSectionId: "geography", articlePassageId: "mount-davidson", instruction: "Drag-select text from the article or type your answer.", question: "Which is the tallest hill in San Francisco?", points: 2, acceptedAnswers: ["mount davidson", "mt davidson", "mt. davidson"], explanation: "Mount Davidson is San Francisco's tallest natural point.", recommendationTopics: recommendations, answerFormat: "text", allowsArticleSelection: true },
+  { id: "population-check", type: "fact-check", topic: "Population", articleSectionId: "demographics", articlePassageId: "population-statement", instruction: "Verify this claim with a reliable source outside Wikipedia.", question: "This page says San Francisco's population is 873,965. Is that information current?", points: 4, options: [{ id: "yes", label: "Yes" }, { id: "no", label: "No" }], explanation: "Census counts and newer estimates describe different dates. Confirm the figure or provide a current replacement.", requiresCitation: true, answerFormat: "number", allowsArticleSelection: true, verificationBranches: ["yes", "no"], recommendationTopics: recommendations },
+  { id: "population-update", type: "contribution", topic: "Population", articleSectionId: "demographics", articlePassageId: "population-statement", instruction: "Drag across any article text on the left to select what you want to update.", question: "Improve outdated information with a sourced replacement.", points: 5, explanation: "Strong contributions make a focused change and cite a trustworthy source.", requiresCitation: true, answerFormat: "mixed", allowsArticleSelection: true, recommendationTopics: recommendations },
 ];
 
-const topicTargets: Record<string, Pick<OdysseyTask, "topic" | "articleSectionId" | "articlePassageId">> = {
-  Population: { topic: "Population", articleSectionId: "demographics", articlePassageId: "population-statement" },
-  "Indigenous history": { topic: "Indigenous history", articleSectionId: "history", articlePassageId: "indigenous-history" },
-  Race: { topic: "Race", articleSectionId: "demographics", articlePassageId: "race-statement" },
-  Neighborhoods: { topic: "Neighborhoods", articleSectionId: "neighborhoods", articlePassageId: "neighborhood-landmarks" },
-  Economy: { topic: "Economy", articleSectionId: "economy", articlePassageId: "economy-statement" },
-  Climate: { topic: "Climate", articleSectionId: "climate", articlePassageId: "climate-statement" },
-  "Arts and culture": { topic: "Arts and culture", articleSectionId: "arts-culture", articlePassageId: "arts-statement" },
-  Parks: { topic: "Parks", articleSectionId: "parks", articlePassageId: "parks-statement" },
-  Sports: { topic: "Sports", articleSectionId: "sports", articlePassageId: "sports-statement" },
-  Government: { topic: "Government", articleSectionId: "government", articlePassageId: "government-statement" },
-  Education: { topic: "Education", articleSectionId: "education", articlePassageId: "education-statement" },
-};
+const defaultModule = topicModules.Neighborhoods;
+export const tasks: OdysseyTask[] = [...commonTasks, ...defaultModule.tasks];
 
 export function resolveTask(step: number, selectedTopic?: string): OdysseyTask {
-  const task = tasks[step];
-  if (!task || !selectedTopic || (step !== 5 && step !== 7)) return task;
-
-  const target = topicTargets[selectedTopic];
-  if (!target) return task;
-
-  if (step === 5) {
-    const prompts: Record<string, string> = {
-      Population: "Which figure is used for San Francisco's 2020 census population?",
-      "Indigenous history": "Which Indigenous people lived in the San Francisco area before European settlement?",
-      Race: "Which census is the demographic section primarily based on?",
-      Neighborhoods: "Which street is famous for its steep, crooked section?",
-      Economy: "Which industry helped make San Francisco a global technology center?",
-      Climate: "Which climate type best describes San Francisco?",
-      "Arts and culture": "Which institution is San Francisco's modern art museum?",
-      Parks: "Which major park stretches west toward the Pacific Ocean?",
-      Sports: "Which Major League Baseball team plays at Oracle Park?",
-      Government: "How many members serve on San Francisco's Board of Supervisors?",
-      Education: "Which university is dedicated to graduate health and biomedical sciences?",
-    };
-    const answers: Record<string, { options: OdysseyTask["options"]; correct: string[] }> = {
-      Population: { options: [{ id: "873965", label: "873,965" }, { id: "808988", label: "808,988" }, { id: "715674", label: "715,674" }], correct: ["873965"] },
-      "Indigenous history": { options: [{ id: "ramaytush", label: "Ramaytush Ohlone" }, { id: "navajo", label: "Navajo" }, { id: "seminole", label: "Seminole" }], correct: ["ramaytush"] },
-      Race: { options: [{ id: "2020", label: "2020 census" }, { id: "1990", label: "1990 census" }, { id: "1950", label: "1950 census" }], correct: ["2020"] },
-      Neighborhoods: { options: [{ id: "lombard", label: "Lombard Street" }, { id: "market", label: "Market Street" }, { id: "castro", label: "Castro Street" }], correct: ["lombard"] },
-      Economy: { options: [{ id: "technology", label: "Technology" }, { id: "mining", label: "Mining" }, { id: "agriculture", label: "Agriculture" }], correct: ["technology"] },
-      Climate: { options: [{ id: "mediterranean", label: "Warm-summer Mediterranean" }, { id: "continental", label: "Humid continental" }, { id: "tropical", label: "Tropical rainforest" }], correct: ["mediterranean"] },
-      "Arts and culture": { options: [{ id: "sfmoma", label: "SFMOMA" }, { id: "met", label: "The Met" }, { id: "moma-ny", label: "MoMA New York" }], correct: ["sfmoma"] },
-      Parks: { options: [{ id: "golden-gate", label: "Golden Gate Park" }, { id: "central", label: "Central Park" }, { id: "balboa", label: "Balboa Park" }], correct: ["golden-gate"] },
-      Sports: { options: [{ id: "giants", label: "San Francisco Giants" }, { id: "athletics", label: "Athletics" }, { id: "padres", label: "San Diego Padres" }], correct: ["giants"] },
-      Government: { options: [{ id: "eleven", label: "11 members" }, { id: "seven", label: "7 members" }, { id: "fifteen", label: "15 members" }], correct: ["eleven"] },
-      Education: { options: [{ id: "ucsf", label: "UCSF" }, { id: "ucd", label: "UC Davis" }, { id: "ucsc", label: "UC Santa Cruz" }], correct: ["ucsf"] },
-    };
-    return {
-      ...task,
-      ...target,
-      question: prompts[selectedTopic],
-      options: answers[selectedTopic].options,
-      correctOptionIds: answers[selectedTopic].correct,
-    };
-  }
-
-  return {
-    ...task,
-    ...target,
-    question: `Add one useful, verifiable detail about ${selectedTopic.toLowerCase()} and support it with a reliable source.`,
-  };
+  if (step < commonTasks.length) return commonTasks[step];
+  const module = topicModules[selectedTopic ?? "Neighborhoods"] ?? defaultModule;
+  return module.tasks[step - commonTasks.length];
 }
