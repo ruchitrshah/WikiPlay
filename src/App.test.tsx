@@ -21,9 +21,9 @@ describe("Wikipedia Odyssey", () => {
     render(<App />);
     fireEvent.click(screen.getByRole("button", { name: /start wikiplay/i }));
 
-    expect(screen.getByRole("heading", { name: /make wikipedia better/i })).toBeInTheDocument();
-    expect(screen.getByText(/grow your confidence/i)).toBeInTheDocument();
-    expect(screen.getByText(/5,800 readers every day/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /introducing micro contributions on wikipedia/i })).toBeInTheDocument();
+    expect(screen.getByText(/the world is still writing/i)).toBeInTheDocument();
+    expect(screen.getByText(/small edits\. real weight/i)).toBeInTheDocument();
     expect(screen.queryByText(/what natural disaster struck/i)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /start playing/i }));
@@ -334,6 +334,19 @@ describe("Wikipedia Odyssey", () => {
     expect(picker).toHaveAttribute("data-state", "closed");
   });
 
+  it("makes each visible topic option interactive and confirms the selected module", () => {
+    render(<App />);
+    startWikiPlay();
+    fireEvent.click(screen.getByLabelText("Earthquake and fire"));
+    fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+
+    const recommendation = screen.getByText(/choose a topic for your final learn/i).closest(".recommendation-card") as HTMLElement;
+    const geography = within(recommendation).getByRole("button", { name: "Geography" });
+    fireEvent.click(geography);
+
+    expect(geography).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("shows topic recommendations only after an answer is submitted", () => {
     render(<App />);
     startWikiPlay();
@@ -366,7 +379,7 @@ describe("Wikipedia Odyssey", () => {
     expect(screen.getByText(/score 1\. 5 chances remaining/i)).toBeInTheDocument();
   });
 
-  it("shows a video explainer instead of the contribution rail on phones", () => {
+  it("shows the shared value story and an autoplaying ambient video on phones", () => {
     const matchMedia = vi.spyOn(window, "matchMedia").mockImplementation((query) => ({
       matches: query === "(max-width: 767px)",
       media: query,
@@ -381,12 +394,25 @@ describe("Wikipedia Odyssey", () => {
     fireEvent.click(screen.getByRole("button", { name: /start wikiplay/i }));
 
     expect(screen.queryByRole("complementary", { name: "WikiPlay" })).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /turn reading into small, meaningful contributions/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /introducing micro contributions on wikipedia/i })).toBeInTheDocument();
+    expect(screen.getByLabelText("WikiPlay")).toBeInTheDocument();
+    expect(screen.queryByText(/wikiplay for the web/i)).not.toBeInTheDocument();
+    expect(screen.getByText("The World Is Still Writing.")).toBeInTheDocument();
+    expect(screen.getByText("Small Edits. Real Weight.")).toBeInTheDocument();
+    expect(screen.getByText("Nobody Owns the Truth.")).toBeInTheDocument();
+    expect(screen.getByText(/50 million pages with citations/i)).toBeInTheDocument();
+    expect(screen.getByText(/Designed by/i)).toBeInTheDocument();
+    expect(screen.queryByText(/contact for more information/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "ruchit.me" })).toHaveAttribute("href", "https://www.ruchit.me");
     const video = screen.getByLabelText("WikiPlay experience overview");
-    expect(video).toHaveAttribute("controls");
+    expect(video).toHaveAttribute("autoplay");
+    expect(video).toHaveProperty("muted", true);
+    expect(video).toHaveAttribute("loop");
     expect(video).toHaveAttribute("playsinline");
-    expect(video).not.toHaveAttribute("autoplay");
-    expect(screen.getByText(/continue on a tablet or computer/i)).toBeInTheDocument();
+    expect(video).not.toHaveAttribute("controls");
+    expect(video).toHaveAttribute("controlslist", "nodownload nofullscreen noremoteplayback");
+    expect(screen.getByRole("button", { name: /available on tablet and desktop/i })).toBeDisabled();
+    expect(screen.getByText("Web-Only Experience")).toBeInTheDocument();
     matchMedia.mockRestore();
   });
 });

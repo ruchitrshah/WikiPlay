@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Lightning, Sparkle, X } from "@phosphor-icons/react";
+import { ArrowRight, Lightning, LockKey, Sparkle, UsersThree, X } from "@phosphor-icons/react";
 import { ArticleSurface } from "./ArticleSurface";
-import { resolveTask } from "./data";
+import { resolveTask, topicModules } from "./data";
 import {
   advanceJourney,
   completeCurrentTask,
@@ -11,8 +11,9 @@ import {
   markCurrentTaskSkipped,
   skipCurrentTask,
 } from "./journey";
-import { OdysseyPanel } from "./OdysseyPanel";
+import { ExperienceCredit, OdysseyPanel } from "./OdysseyPanel";
 import { Button } from "./OdysseyUi";
+import { KnowledgeSpark } from "./DelightAnimation";
 import type { TaskResponse } from "./types";
 
 function prefersReducedMotion() {
@@ -66,7 +67,7 @@ export function App() {
       wasStarted.current = true;
       return;
     }
-    if (state.phase === "complete") return;
+    if (state.phase !== "question" && state.phase !== "learn-more") return;
     const timeout = window.setTimeout(() => navigateArticle(task.articleSectionId, task.articlePassageId), 80);
     return () => window.clearTimeout(timeout);
   }, [state.started, state.currentStep, state.selectedTopic, state.phase, task.articleSectionId, task.articlePassageId]);
@@ -85,8 +86,10 @@ export function App() {
 
   const chooseTopic = (selectedTopic: string) => {
     setState((current) => ({ ...current, selectedTopic }));
-    const selectedTask = resolveTask(state.currentStep, selectedTopic);
-    navigateArticle(selectedTask.articleSectionId, selectedTask.articlePassageId);
+    const selectedModule = topicModules[selectedTopic];
+    if (selectedModule) {
+      navigateArticle(selectedModule.articleSectionId, selectedModule.tasks[0].articlePassageId);
+    }
   };
 
   const start = () => {
@@ -165,20 +168,60 @@ export function App() {
 
       {state.started && isPhone && (
         <section className="mobile-wikiplay" aria-labelledby="mobile-wikiplay-title">
-          <button className="mobile-wikiplay-close" type="button" aria-label="Close WikiPlay" onClick={exit}><X size={18} /></button>
-          <img className="mobile-wikiplay-mark" src="/wikiplay-blue.png" alt="" aria-hidden="true" />
-          <span className="mobile-eyebrow">WikiPlay for the web</span>
-          <h1 id="mobile-wikiplay-title">Turn reading into small, meaningful contributions.</h1>
-          <p>WikiPlay helps you learn from an article, verify claims, and draft sourced updates through eight guided rounds.</p>
+          <div className="panel-state-wash atmospheric mobile-state-wash" aria-hidden="true" />
+          <header className="mobile-wikiplay-header">
+            <div className="mobile-wikiplay-brand" aria-label="WikiPlay">
+              <KnowledgeSpark
+                className="mobile-brand-spark"
+                delay={180}
+                fallback={<img className="mobile-wikiplay-mark" src="/wikiplay-blue.png" alt="" aria-hidden="true" />}
+              />
+              <span>WikiPlay</span>
+            </div>
+            <button className="mobile-wikiplay-close" type="button" aria-label="Close WikiPlay" onClick={exit}><X size={18} /></button>
+          </header>
           <div className="mobile-video-shell">
-            <video controls playsInline preload="metadata" poster="/WikiPlay.png" aria-label="WikiPlay experience overview">
+            <video
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="auto"
+              disablePictureInPicture
+              disableRemotePlayback
+              controlsList="nodownload nofullscreen noremoteplayback"
+              onContextMenu={(event) => event.preventDefault()}
+              poster="/WikiPlay.png"
+              aria-label="WikiPlay experience overview"
+            >
               <source src="/media/WikiPlay.mp4" type="video/mp4" />
               Your browser does not support embedded video.
             </video>
           </div>
-          <div className="mobile-device-note">
-            <strong>Continue on a tablet or computer</strong>
-            <span>The contribution experience uses the article and task panel side by side, so it is not available on phones yet.</span>
+          <div className="mobile-wikiplay-content">
+            <h1 id="mobile-wikiplay-title">Introducing Micro Contributions on Wikipedia.</h1>
+            <p>A new way designed to help you learn and contribute your dense, rich information on the topics you love.</p>
+            <div className="mobile-benefits" aria-label="WikiPlay benefits">
+              <div>
+                <Lightning size={28} weight="duotone" aria-hidden="true" />
+                <span><strong>The World Is Still Writing.</strong>50 million pages with citations, and counting. None of them are finished.</span>
+              </div>
+              <div>
+                <Sparkle size={28} weight="duotone" aria-hidden="true" />
+                <span><strong>Small Edits. Real Weight.</strong>A few minutes of your contribution moves knowledge forward, for everyone.</span>
+              </div>
+              <div>
+                <UsersThree size={28} weight="duotone" aria-hidden="true" />
+                <span><strong>Nobody Owns the Truth.</strong>That's the whole idea. Help keep it that way. Your opinion matters now more than ever.</span>
+              </div>
+            </div>
+            <div className="mobile-bottom-actions">
+              <button className="mobile-web-only" type="button" disabled aria-label="WikiPlay is available on tablet and desktop">
+                <LockKey size={18} weight="bold" aria-hidden="true" />
+                Web-Only Experience
+              </button>
+              <ExperienceCredit className="mobile-experience-credit" />
+            </div>
           </div>
         </section>
       )}

@@ -48,17 +48,34 @@ function StepIcon({ status, number }: { status: StepStatus; number: number }) {
   return <span>{number}</span>;
 }
 
+export function IntroBenefits({ className = "" }: { className?: string }) {
+  return (
+    <div className={`intro-benefits ${className}`.trim()}>
+      <div><Lightning size={30} weight="duotone" aria-hidden="true" /><span><strong>The World Is Still Writing.</strong><small>50 million pages with citations, and counting. None of them are finished.</small></span></div>
+      <div><Sparkle size={30} weight="duotone" aria-hidden="true" /><span><strong>Small Edits. Real Weight.</strong><small>A few minutes of your contribution moves knowledge forward, for everyone.</small></span></div>
+      <div><UsersThree size={30} weight="duotone" aria-hidden="true" /><span><strong>Nobody Owns the Truth.</strong><small>That's the whole idea. Help keep it that way. Your opinion matters now more than ever.</small></span></div>
+    </div>
+  );
+}
+
+export function ExperienceCredit({ className = "" }: { className?: string }) {
+  return (
+    <p className={`experience-credit ${className}`.trim()}>
+      Designed by <a href="https://www.ruchit.me" target="_blank" rel="noreferrer">ruchit.me</a> with Codex.
+    </p>
+  );
+}
+
 function IntroCard({ onBegin }: { onBegin: () => void }) {
   return (
     <div className="intro-card" aria-labelledby="intro-title">
-      <h1 id="intro-title" className="intro-piece">Make Wikipedia better, one small action at a time.</h1>
-      <p className="intro-summary intro-piece">Learn from what you read, verify facts, and draft sourced improvements without opening the full editor.</p>
-      <div className="intro-benefits intro-piece">
-        <div><Lightning size={30} weight="duotone" aria-hidden="true" /><span><strong>Build Momentum</strong><small>Earn points across eight quick rounds.</small></span></div>
-        <div><Sparkle size={30} weight="duotone" aria-hidden="true" /><span><strong>Grow Your Confidence</strong><small>Move from Reader to Explorer, Fact-Checker, and Contributor.</small></span></div>
-        <div><UsersThree size={30} weight="duotone" aria-hidden="true" /><span><strong>Help More Readers</strong><small>Small improvements could support about 5,800 readers every day.</small></span></div>
+      <h1 id="intro-title" className="intro-piece">Introducing Micro Contributions on Wikipedia.</h1>
+      <p className="intro-summary intro-piece">A new way designed to help you learn and contribute your dense, rich information on the topics you love.</p>
+      <IntroBenefits className="intro-piece" />
+      <div className="intro-bottom-actions intro-piece">
+        <Button onClick={onBegin}>Start Playing <ArrowRight className="button-arrow" size={16} /></Button>
+        <ExperienceCredit />
       </div>
-      <Button className="intro-piece" onClick={onBegin}>Start Playing <ArrowRight className="button-arrow" size={16} /></Button>
     </div>
   );
 }
@@ -158,7 +175,7 @@ function CitationField({ value, onChange, disabled = false }: { value: string; o
   const errorId = "citation-error";
   return (
     <div className={`field-group${invalid ? " invalid" : ""}`}>
-      <div className="field-label-row"><label htmlFor="citation-url">Reliable source URL</label><SourceGuidanceDialog /></div>
+      <label htmlFor="citation-url">Reliable source URL</label>
       <div className="citation-field">
         <LinkSimple size={18} aria-hidden="true" />
         <input
@@ -173,6 +190,7 @@ function CitationField({ value, onChange, disabled = false }: { value: string; o
         />
       </div>
       {invalid && <span id={errorId} className="field-error" role="alert">Enter a complete URL beginning with http:// or https://.</span>}
+      <SourceGuidanceDialog />
     </div>
   );
 }
@@ -211,24 +229,24 @@ function QuestionForm({ task, response, onResponse }: Pick<OdysseyPanelProps, "t
           {task.options?.map((option) => {
             const checked = response.verdict === option.id;
             return (
-            <label className={`choice-row${checked ? " selected" : ""}`} key={option.id}>
-              <input
-                type="radio"
-                name={task.id}
-                checked={checked}
-                onClick={(event) => {
-                  if (checked) {
-                    event.preventDefault();
-                    onResponse({ ...response, verdict: "" });
-                  }
-                }}
-                onChange={() => {
-                  if (!checked) onResponse({ ...response, verdict: option.id as "yes" | "no" });
-                }}
-              />
-              <span className="control-mark" aria-hidden="true"><SelectionIcon checked={checked} /></span>
-              <span>{option.label}</span>
-            </label>
+              <label className={`choice-row${checked ? " selected" : ""}`} key={option.id}>
+                <input
+                  type="radio"
+                  name={task.id}
+                  checked={checked}
+                  onClick={(event) => {
+                    if (checked) {
+                      event.preventDefault();
+                      onResponse({ ...response, verdict: "" });
+                    }
+                  }}
+                  onChange={() => {
+                    if (!checked) onResponse({ ...response, verdict: option.id as "yes" | "no" });
+                  }}
+                />
+                <span className="control-mark" aria-hidden="true"><SelectionIcon checked={checked} /></span>
+                <span>{option.label}</span>
+              </label>
             );
           })}
         </fieldset>
